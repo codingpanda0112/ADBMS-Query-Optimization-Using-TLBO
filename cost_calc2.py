@@ -140,4 +140,6 @@ for i in range(len(QAC)):
     costDict[i + 1].append(QAC[i])
     costDict[i + 1].append(QLC[i])
     costDict[i + 1].append(LPC[i])
+# for i in costDict:
+#     print("Cost Dictionary:",i,costDict[i])
 print("cost dictionary=", costDict)

@@ -1,6 +1,6 @@
 import sqlite3
 
-conn = sqlite3.connect('/home/pachi/PycharmProjects/DBproj/database2_new.db')
+conn = sqlite3.connect('database2_new.db')
 c = conn.cursor()
 print("Connection Opnend!")
 

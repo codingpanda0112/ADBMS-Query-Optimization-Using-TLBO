@@ -2,19 +2,19 @@ import cost_calc2
 import math
 from random import *
 import numpy as np
+import matplotlib.pyplot as plt
+
+from tabulate import tabulate
 
 QP = cost_calc2.queryPlan
 costs = cost_calc2.costDict
-# print("QueryPlans=", QP)
-# print("No of QP=", len(QP))
-# print("costs = ", costs)
 
 # Step 1: Fix the population size
 population_size = len(costs)
 print("population size=", population_size)
 
 # Step 2: Fix the maximum number of iterations
-max_iteration = 10
+max_iteration = 30
 
 # solution for each generation and the fitness value of solution
 costs_array = []
@@ -22,7 +22,6 @@ fitness_array = []
 for i in range(population_size):
     # converting cost dictionary to array
     costs_array.append(costs[i + 1])
-print("cost array =", costs_array)
 decision_var = len(np.array(costs_array)[1, :])
 
 
@@ -30,7 +29,7 @@ decision_var = len(np.array(costs_array)[1, :])
 def fitness_func(member):
     result = 0
     for m in range(len(member)):
-        result += math.sqrt(member[m])
+        result += math.pow(member[m], 2)
     return result
 
 
@@ -43,16 +42,9 @@ def sel_teacher():
     # print("position of teacher = ", pos_teacher)
     return pos_teacher
 
-
-# print("best QP, teacher =", QP[sel_teacher()])
-# print("QAC, QLC of teacher= ", costs[sel_teacher()])
-# print("QAC, QLC of teacher= ", costs_array[sel_teacher()-1])
-
-
 # Step 5: determine mean of each cost of the population
 def mean_column_costs():
     means = np.array(costs_array).mean(axis=0)
-    print("numpy mean=", means)
     return means
 
 
@@ -60,19 +52,19 @@ def mean_column_costs():
 def gen_new_soln():
     global costs_array
     global fitness_array
-    X_best = np.array(costs_array[sel_teacher() - 1])
+    X_best = np.array(costs_array[sel_teacher()])
     X_mean = mean_column_costs()
-    r = np.random.rand(decision_var)
-    print("r=", r)
-    Tf = round(random()) + 1
-    print("tf=", Tf)
+
+    Tf = round(random()) + 1  # Tf same for all variables of a solution
     for k in range(population_size):
         X = costs_array[k]
+        r = np.random.rand(decision_var)  # r to be calculated for each variable in the solution
         X_new = X + r * (X_best - (Tf * X_mean))
+
         # Step 7: Before calculating fitness value for x_new, checking whether values in x_new are in between the lb
         # and ub condition of the fitness func
-        X_new[(X_new < 0)] = 0
-        X_new[(X_new > 2)] = 2
+        X_new[(X_new < -5.12)] = -5.12
+        X_new[(X_new > 5.12)] = 5.12
         # Step 8: Calculating the fitness value of the bounded solution
         fitness_x_new = fitness_func(X_new)
         # Step 9: Perform greedy selection to update the population
@@ -81,6 +73,80 @@ def gen_new_soln():
             costs_array[k] = X_new
             fitness_array[k] = fitness_x_new
 
+        # Learners Phase
+        xl = np.array(costs_array[k])
+        while True:
+            y = np.random.randint(population_size)
+            if k != y: break
+        partner = costs_array[y]
+        fitness_partner = fitness_func(partner)
+        rl = np.random.rand(decision_var)
+        if fitness_array[k] < fitness_partner:
+            Xlnew = xl + rl * (xl - partner)
+        else:
+            Xlnew = xl - rl * (xl - partner)
+        Xlnew[(Xlnew < -5.12)] = -5.12
+        Xlnew[(Xlnew > 5.12)] = 5.12
+        fitness_learner = fitness_func(Xlnew)
+        if fitness_learner < fitness_array[k]:
+            costs_array[k] = Xlnew
+            fitness_array[k] = fitness_learner
+
+def selection_sort(x):
+    for i in range(len(x)):
+        swap = i + np.argmin(x[i:])
+        (x[i], x[swap]) = (x[swap], x[i])
+    return x
 
 
-gen_new_soln()
+def pos_sorted_index(fitness_array_before, fitness_array_after):
+    pos = []
+    for items in fitness_array_after:
+        pos.append(np.where(fitness_array_before == items)[0][0])
+    return pos
+
+# data={}
+# # itr=[10,20,30,40,50]
+# itr=[2,4,6,8,10]
+#
+# itr=[15,20,25,30,35]
+#
+#
+#
+# for max_iteration in itr:
+#     for iteration in range(max_iteration):
+#         gen_new_soln()
+#         fitness_array_sorted = np.sort(fitness_array)
+#         data[max_iteration]=[fitness_array_sorted]
+# print(data)
+#
+# x=[i for i in range(1,population_size+1)]
+#
+#
+# plt.figure( figsize=(8, 5))
+# plt.xlabel("QEPS")
+# plt.ylabel("QC")
+# plt.title
+# i=0
+# colormap=['Purple', 'Blue', 'Green', 'Orange', 'Red']
+# for itr in data:
+#     y=data[itr][0]
+#     clr=colormap[i]
+#     i=i+1
+#     plt.plot(x,y,color=clr,linewidth=1.5)
+#
+# plt.show()
+
+for iteration in range(max_iteration):
+    gen_new_soln()
+fitness_array_before = np.array(fitness_array)
+print("fitness array before sorting =", fitness_array_before)
+fitness_array_after = selection_sort(fitness_array)
+print("fitness array after sorting =", fitness_array_after)
+sorted_index = pos_sorted_index(fitness_array_before, fitness_array_after)
+print ("sorted indices = ", sorted_index)
+
+table = []
+for i in range(population_size):
+    table.append([i + 1, sorted_index[i] + 1, fitness_array[i]])
+print(tabulate(table, headers=["Rank", "QEP No.", "Fitness Value"]))
